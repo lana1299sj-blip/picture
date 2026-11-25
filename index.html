@@ -152,7 +152,7 @@ function currentKey(){
 function plan(){
   const n = items.length; if(!n) return null;
   const key = currentKey();
-  if(n===1){ const it=items[0]; return {W:it.w,H:it.h,draws:[{i:0,x:0,y:0,w:it.w,h:it.h,mode:'fit'}]}; }
+  if(n===1){ const it=items[0]; return {W:it.w,H:it.h,draws:[{i:0,x:0,y:0,w:it.w,h:it.h,mode:'contain'}]}; }
   const def = L[key];
   if(def.stack){
     let W,H,draws=[],v=def.stack==='v';
@@ -165,13 +165,13 @@ function plan(){
     let pos=0;
     sizes.forEach((z,i)=>{
       const a=Math.round(pos*k), b=Math.round((pos+(v?z.h:z.w))*k);
-      draws.push(v?{i,x:0,y:a,w:Math.round(tw*k),h:b-a,mode:'fit'}:{i,x:a,y:0,w:b-a,h:Math.round(th*k),mode:'fit'});
+      draws.push(v?{i,x:0,y:a,w:Math.round(tw*k),h:b-a,mode:'contain'}:{i,x:a,y:0,w:b-a,h:Math.round(th*k),mode:'contain'});
       pos += v?z.h:z.w;
     });
     W = Math.round(tw*k); H = Math.round(th*k);
     return {W,H,draws};
   }
-  // 格狀：格子長寬比取圖片平均比例（限制在 0.7～1.5）
+  // 格狀：格子長寬比取圖片平均比例（限制在 0.7～1.5），圖片以 Contain 完整置入格內
   const avg = items.reduce((s,it)=>s+it.w/it.h,0)/n;
   const a = Math.min(1.5, Math.max(0.7, avg));
   const g = def.make(n);
@@ -182,7 +182,7 @@ function plan(){
   const draws = g.list.map((r,i)=>{
     const x0=Math.round(r.x*a*s), x1=Math.round((r.x+r.w)*a*s);
     const y0=Math.round(r.y*s),   y1=Math.round((r.y+r.h)*s);
-    return {i,x:x0,y:y0,w:x1-x0,h:y1-y0,mode:'cover'};
+    return {i,x:x0,y:y0,w:x1-x0,h:y1-y0,mode:'contain'};
   });
   return {W,H,draws};
 }
@@ -198,12 +198,10 @@ function paint(cv, p, f){
     const dx=Math.round(d.x*f), dy=Math.round(d.y*f);
     const dw=Math.round((d.x+d.w)*f)-dx, dh=Math.round((d.y+d.h)*f)-dy;
     if(dw<=0||dh<=0) continue;
-    let sx=0,sy=0,cw=sw,ch=sh;
-    if(d.mode==='cover'){
-      const k=Math.max(dw/sw,dh/sh);
-      cw=dw/k; ch=dh/k; sx=(sw-cw)/2; sy=(sh-ch)/2;
-    }
-    c.drawImage(src,sx,sy,cw,ch,dx,dy,dw,dh);
+    // Contain：等比例縮放、完整顯示、置中，其餘保持白底
+    const k=Math.min(dw/sw,dh/sh);
+    const rw=Math.max(1,Math.round(sw*k)), rh=Math.max(1,Math.round(sh*k));
+    c.drawImage(src,0,0,sw,sh,dx+Math.round((dw-rw)/2),dy+Math.round((dh-rh)/2),rw,rh);
   }
 }
 
